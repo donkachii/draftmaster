@@ -7,13 +7,43 @@ const loading = ref(false);
 const handleLogin = async () => {
   try {
     loading.value = true;
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/`,
       },
     });
     if (error) throw error;
+
+    let user = null;
+    let tries = 0;
+    while (!user && tries < 10) {
+      const { data: userData } = await supabase.auth.getUser();
+      user = userData?.user;
+      if (!user) await new Promise((r) => setTimeout(r, 300));
+      tries++;
+    }
+    if (!user) return;
+
+    const { data: existing, error: fetchError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", user.id)
+      .single();
+    if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+    if (!existing) {
+      const { error: insertError } = await supabase.from("users").insert({
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || "",
+        created_at: new Date().toISOString(),
+      });
+      if (insertError) {
+        console.error("User insert error:", insertError);
+        alert("Failed to save user: " + insertError.message);
+        throw insertError;
+      }
+    }
   } catch (error) {
     if (error instanceof Error) {
       alert(error.message);

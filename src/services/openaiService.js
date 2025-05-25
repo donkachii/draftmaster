@@ -30,7 +30,6 @@ async function generateSuggestions(content, type) {
   const data = await response.json();
   const text = data.choices?.[0]?.message?.content?.trim() || '';
 
-  // For keywords, split by comma or newline
   if (type === 'keywords') {
     return text.split(/,|\n/).map(k => k.trim()).filter(Boolean);
   }

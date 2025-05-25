@@ -42,10 +42,18 @@
             </button>
           </div>
         </div>
+        <button
+          class="btn btn-success w-100 mb-4"
+          @click="saveDraft"
+          :disabled="!title.trim() || !content.trim() || saving"
+        >
+          <span v-if="saving">Saving...</span>
+          <span v-else>Save Draft</span>
+        </button>
         <SuggestionPanel :suggestions="suggestions" />
       </div>
       <div class="col-md-4">
-        <HistoryPanel :suggestions="suggestions" />
+        <HistoryPanel :user-id="user && user.id ? user.id : ''" />
         <StatsPanel :content="content" class="mt-4" />
       </div>
     </div>
@@ -59,6 +67,7 @@ import { useRouter } from "vue-router";
 import SuggestionPanel from "../components/SuggestionPanel.vue";
 import HistoryPanel from "../components/HistoryPanel.vue";
 import StatsPanel from "../components/StatsPanel.vue";
+
 import openaiService from "../services/openaiService";
 
 const router = useRouter();
@@ -68,6 +77,7 @@ const title = ref("");
 const content = ref("");
 const suggestions = ref({ title: [], summary: "", keywords: [] });
 const loading = ref({ title: false, summary: false, keywords: false });
+const saving = ref(false);
 
 onMounted(async () => {
   const { data } = await supabase.auth.getUser();
@@ -79,8 +89,8 @@ onMounted(async () => {
 });
 
 async function generateSuggestion(type) {
-  if (!content.value.trim()) {
-    alert("Write some content first.");
+  if (!content.value.trim() || !title.value.trim()) {
+    alert("Write some content and title first.");
     return;
   }
   loading.value[type] = true;
@@ -100,6 +110,89 @@ async function generateSuggestion(type) {
     alert("Error fetching from AI.");
   } finally {
     loading.value[type] = false;
+  }
+}
+
+async function saveDraft() {
+  if (!title.value.trim() || !content.value.trim()) {
+    alert("Title and content are required.");
+    return;
+  }
+  saving.value = true;
+  try {
+    /*
+    const { data: postData, error: postError } = await supabase
+      .from("blog_posts")
+      .insert({
+        title: title.value,
+        content: content.value,
+        user_id: user.value.id,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (postError || !postData)
+      throw postError || new Error("No post data returned");
+    const blogPostId = postData.id;
+
+    const aiInserts = [];
+    if (suggestions.value.title && suggestions.value.title.length) {
+      for (const t of suggestions.value.title) {
+        aiInserts.push({
+          blogs_post_id: blogPostId,
+          type: "title",
+          content: t,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+    if (suggestions.value.summary) {
+      aiInserts.push({
+        blogs_post_id: blogPostId,
+        type: "summary",
+        content: suggestions.value.summary,
+        created_at: new Date().toISOString(),
+      });
+    }
+    if (suggestions.value.keywords && suggestions.value.keywords.length) {
+      for (const k of suggestions.value.keywords) {
+        aiInserts.push({
+          blogs_post_id: blogPostId,
+          type: "keywords",
+          content: k,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+    if (aiInserts.length) {
+      const { error: aiError } = await supabase
+        .from("ai_suggestions")
+        .insert(aiInserts);
+      if (aiError) throw aiError;
+    }
+    */
+
+
+    const STORAGE_KEY = 'draftmaster_drafts';
+    const raw = localStorage.getItem(STORAGE_KEY);
+    let drafts = [];
+    if (raw) {
+      try { drafts = JSON.parse(raw); } catch {}
+    }
+    const newDraft = {
+      id: Date.now(),
+      title: title.value,
+      content: content.value,
+      suggestions: JSON.parse(JSON.stringify(suggestions.value)),
+      created_at: new Date().toISOString(),
+    };
+    drafts.unshift(newDraft);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+    alert("Draft saved locally!");
+  } catch (e) {
+    alert("Error saving draft: " + (e.message || e));
+  } finally {
+    saving.value = false;
   }
 }
 </script>

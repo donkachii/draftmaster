@@ -55,6 +55,7 @@ onMounted(async () => {
 async function logout() {
   await supabase.auth.signOut();
   user.value = null;
+  router.push("/");
 }
 </script>
 

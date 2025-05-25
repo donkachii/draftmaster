@@ -9,6 +9,8 @@ const promptTemplates = {
 async function generateSuggestions(content, type) {
     
   const prompt = promptTemplates[type]?.(content);
+
+  console.log(prompt, " content ", type, " type ");
   if (!prompt) throw new Error('Invalid suggestion type');
 
   const response = await fetch(OPENAI_API_URL, {
@@ -28,10 +30,11 @@ async function generateSuggestions(content, type) {
   const data = await response.json();
   const text = data.choices?.[0]?.message?.content?.trim() || '';
 
-  // For keywords, split by comma or newline
   if (type === 'keywords') {
     return text.split(/,|\n/).map(k => k.trim()).filter(Boolean);
   }
+
+  console.log(text, " text ");
   return text;
 }
 
